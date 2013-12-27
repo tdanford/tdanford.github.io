@@ -4,6 +4,9 @@
 /*
 /*****************************************************************************/
 
+@import url(http://fonts.googleapis.com/css?family=Oswald);
+@import url(http://fonts.googleapis.com/css?family=Roboto);
+
 /* Global Reset */
 * {
   margin: 0;
@@ -14,15 +17,17 @@ html, body { height: 100%; }
 
 body {
   background-color: #FFF;
-  font: 13.34px Helvetica, Arial, sans-serif;
+  font: 13.34px 'Roboto', sans-serif;
   font-size: small;
   text-align: center;
 }
 
 h1, h2, h3, h4, h5, h6 {
+  font-family: 'Oswald', Helvetica, Arial, sans-serif;
   font-size: 100%; }
 
 h1 { margin-bottom: 1em; }
+h1.title { font-size: 200%; }
 p { margin: 1em 0; }
 
 a         { color: #00a; }
