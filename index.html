@@ -7,7 +7,24 @@ title: Octopus Tank at the Aquarium
   <h1>Blog Posts</h1>
   <ul class="posts">
     {% for post in site.posts %}
-      <li><span>{{ post.date | date_to_string }}</span> &raquo; <a href="{{ post.url }}">{{ post.title }}</a></li>
+	<li><span>{{ post.date | date_to_string }}</span> &raquo; <a href="{{ post.url }}">{{ post.title }}</a> &raquo; <span>{{ post.tags | array_to_sentence_string }}</span>
+	</li>
     {% endfor %}
   </ul>
 </div>
+
+<script type="application/javascript">
+	//if(typeof post_tag_data === 'undefined') { post_tag_data = {} }
+	post_tag_data = {} ; 
+
+    {% for post in site.posts %}
+	(function() { 
+		var post_url = '{{post.url}}';
+		var post_tags = '{{ post.tags | join: "," }}'.split(',');
+		post_tag_data[post_url] = post_tags;
+	 })();
+    {% endfor %}
+
+
+</script>
+
