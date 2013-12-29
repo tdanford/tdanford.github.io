@@ -54,7 +54,7 @@ Choose one of the following commands:
 
 Each of these entries, such as ``bam2adam`` and ``flagstat``, are ADAM utilities and tools that can be invoked.  The first that we'll use is the ``bam2adam`` command to convert a BAM file into an "ADAM record file" which provides a more efficient basis for many of the subsequent computations.
 
-To test out the execution of ADAM on a local machine, you'll first need a small BAM.  I typically choose one of the pre-aligned BAMs from the [1000genomes project on S3](http://aws.amazon.com/1000genomes/), but any reasonable BAM should work just fine -- for example, I use the ``s3cmd`` command-line tool to grab a simple pre-processed BAM with an exome sample in it from S3: 
+To test out the execution of ADAM on a local machine, we'll also need a small BAM.  I typically choose one of the pre-aligned BAMs from the [1000genomes project on S3](http://aws.amazon.com/1000genomes/), but any reasonable BAM should work just fine -- for example, I use the ``s3cmd`` command-line tool to grab a simple pre-processed BAM with an exome sample in it from S3: 
 
 ```bash 
 s3cmd get \
@@ -89,26 +89,44 @@ The ADAM project is composed of three logically distinct components:
 2. methods
 3. a command-line wrapper
 
-The _formats_ component, present in the ``adam-format`` sub-module of the ADAM repository, contains definitions of the central data structures for bioinformatics which will be serialized to (and from) disk, distributed in memory across a cluster, and used as the basis for most of the computation and tools in the ADAM project.  
+The _formats_ component, present in the ``adam-format`` sub-module of the ADAM repository, contains definitions of the central bioinformatics data structures which will be serialized to and from disk, distributed in memory across a cluster, and used as the basis for most of the computations and tools in the ADAM project.  
 
-ADAM Formats
-============
+The _methods_ component, embodied in the ``adam-core`` sub-module, contains implementations of common tools for manipulating these data structures. For example, there are implementations of "local realignment," BQSR, and MarkDuplicates (from the GATK and Picard packages) in this module; there are also re-implementations of other non-standard tools for examining and comparing data between ADAM files. Each of these methods is currently written as Scala code which  
+
+Finally, the _command-line wrapper_ is present in the ``adam-cli`` sub-module.  This contains the wrapper code necessary for running each of the tools as a command-line utility, executed either against an existing Spark cluster or locally if no Spark cluster is provided.  When we ran the ``bam2adam`` command, above, since we did not provide an explicit location for a Spark cluster, a "local cluster" (parallelized across the cores of the local machine only) was created and the command was executed in that framework instead.
+
+Avro and Parquet for Formats
+----------------------------
+
+The formats themselves are written as Avro schemas in the [adam.avdl](https://github.com/bigdatagenomics/adam/blob/master/adam-format/src/main/resources/avro/adam.avdl) file.  This file defines as set of "record" types, which are similar to the table definitions in the DDL-sublanguage of a SQL relational database system.  Avro is a tool for reading these record definitions and generating Java class files which mirror their structure, as well as parsers and serializers to convert between objects of these classes and "over the wire" binary representations.  
+
+Parquet defines a serialization for sets of these objects into multi-part file format which is suitable for use within a "column-store"-style data system &mdash; that is, it stores the columns (the individual attributes of each record) as a different part of the file, it uses dictionary- and run-length-encoding along with compression to reduce the size of these columns on disk, it maintains headers to allow chunking of the files themselves, and it provides support for projections and push-down predicates when reading the files.  
+
+The ADAMRecord format
+---------------------
 
 At this point, if you have not already, you should read the [SAM/BAM file format specification](http://samtools.sourceforge.net/SAMv1.pdf).
 
 <pre>
 record ADAMRecord {
     union { null, string } referenceName = null;
-    union { null, int } referenceId = null;
-    union { null, long } start = null;
-    union { null, int } mapq = null;
+    union { null, int }    referenceId = null;
+    union { null, long }   referenceLength = null;
+    union { null, string } referenceUrl = null;
+
     union { null, string } readName = null;
     union { null, string } sequence = null;
-    union { null, string } mateReference = null;
-    union { null, long } mateAlignmentStart = null;
+    union { null, int }    mapq = null;
+    union { null, long }   start = null;
     union { null, string } cigar = null;
     union { null, string } qual = null;
-    union { null, string } recordGroupId = null;
+
+    union { null, int }    mateReferenceId = null;
+    union { null, string } mateReference = null;
+    union { null, long }   mateReferenceLength = null;
+    union { null, string } mateReferenceUrl = null;
+    union { null, long }   mateAlignmentStart = null;
+
     union { boolean, null } readPaired = false;
     union { boolean, null } properPair = false;
     union { boolean, null } readMapped = false;
@@ -120,25 +138,28 @@ record ADAMRecord {
     union { boolean, null } primaryAlignment = false;
     union { boolean, null } failedVendorQualityChecks = false;
     union { boolean, null } duplicateRead = false;
+
     union { null, string } mismatchingPositions = null;
     union { null, string } attributes = null;
+
+    union { null, string } recordGroupId = null;
     union { null, string } recordGroupSequencingCenter = null;
     union { null, string } recordGroupDescription = null;
-    union { null, long } recordGroupRunDateEpoch = null;
+    union { null, long }   recordGroupRunDateEpoch = null;
     union { null, string } recordGroupFlowOrder = null;
     union { null, string } recordGroupKeySequence = null;
     union { null, string } recordGroupLibrary = null;
-    union { null, int } recordGroupPredictedMedianInsertSize = null;
+    union { null, int }    recordGroupPredictedMedianInsertSize = null;
     union { null, string } recordGroupPlatform = null;
     union { null, string } recordGroupPlatformUnit = null;
     union { null, string } recordGroupSample = null;
-    union { null, int } mateReferenceId = null;
-    union { null, long }   referenceLength = null;
-    union { null, string } referenceUrl = null;
-    union { null, long } mateReferenceLength = null;
-    union { null, string } mateReferenceUrl = null;
 }
 </pre>
+
+Where'd The Header Go? 
+----------------------
+
+You might be asking yourself at this point, "these are the records from a BAM, but where is the information normally stored in the BAM or SAM _header_?" 
 
 
 <span style="font-size: 150%; font-family: monospace;">RDD[ADAMRecord]</span> as a BAM Replacement
