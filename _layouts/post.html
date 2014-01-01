@@ -2,8 +2,7 @@
 layout: default
 ---
 <h2 class="post_title">{{ page.title }}</h2>
-<p class="meta">{{ page.date | date_to_string }}</p>
-
+<p class="meta">{{ page.date | date_to_string }} &raquo; {{ page.tags | array_to_sentence_string }}</p>
 <div class="post">
 {{ content }}
 </div>
