@@ -13,18 +13,3 @@ title: Octopus Tank at the Aquarium
   </ul>
 </div>
 
-<script type="application/javascript">
-	//if(typeof post_tag_data === 'undefined') { post_tag_data = {} }
-	post_tag_data = {} ; 
-
-    {% for post in site.posts %}
-	(function() { 
-		var post_url = '{{post.url}}';
-		var post_tags = '{{ post.tags | join: "," }}'.split(',');
-		post_tag_data[post_url] = post_tags;
-	 })();
-    {% endfor %}
-
-
-</script>
-
